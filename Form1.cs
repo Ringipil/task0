@@ -1,5 +1,4 @@
 using System.Data.SQLite;
-
 namespace task0
 {
     public partial class Form1 : Form
@@ -21,19 +20,18 @@ namespace task0
             {
                 connection.Open();
                 string createTableQuery = @"
-            CREATE TABLE IF NOT EXISTS People (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Name TEXT NOT NULL,
-                PhoneNumber TEXT NOT NULL,
-                Email TEXT NOT NULL
-            )";
+                    CREATE TABLE IF NOT EXISTS People (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT NOT NULL,
+                        PhoneNumber TEXT NOT NULL,
+                        Email TEXT NOT NULL
+                    );";
                 using (var command = new SQLiteCommand(createTableQuery, connection))
                 {
                     command.ExecuteNonQuery();
                 }
             }
         }
-
 
         private void LoadPeople()
         {
@@ -43,13 +41,14 @@ namespace task0
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
-                string query = "SELECT Name, PhoneNumber, Email FROM People";
+                string query = "SELECT Id, Name, PhoneNumber, Email FROM People";
                 using (var command = new SQLiteCommand(query, connection))
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
                         var person = new Person(
+                            Convert.ToInt32(reader["Id"]),
                             reader["Name"].ToString(),
                             reader["PhoneNumber"].ToString(),
                             reader["Email"].ToString()
@@ -62,38 +61,18 @@ namespace task0
             UpdateListView();
         }
 
-
         private void UpdateListView()
         {
             listView1.Items.Clear();
-            foreach (var person in peopleList.OrderBy(p => p.Name))
+            foreach (var person in peopleList)
             {
                 var item = new ListViewItem(person.Name);
                 item.SubItems.Add(person.PhoneNumber);
                 item.SubItems.Add(person.Email);
+                item.Tag = person.Id;
                 listView1.Items.Add(item);
             }
         }
-
-        private void AddPersonToDatabase(Person person)
-        {
-            string connectionString = "Data Source=people.db;Version=3;";
-            using (var connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
-                string query = @"
-            INSERT INTO People (Name, PhoneNumber, Email) 
-            VALUES (@Name, @PhoneNumber, @Email)";
-                using (var command = new SQLiteCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@Name", person.Name);
-                    command.Parameters.AddWithValue("@PhoneNumber", person.PhoneNumber);
-                    command.Parameters.AddWithValue("@Email", person.Email);
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-
 
         private void buttonAdd_Click(object sender, EventArgs e)
         {
@@ -107,34 +86,21 @@ namespace task0
                 return;
             }
 
-            if (!email.Contains("@") || !email.Contains("."))
+            if (selectedPerson == null)
             {
-                MessageBox.Show("Invalid email format.");
-                return;
-            }
-
-            if (!phone.All(char.IsDigit) || phone.Length < 7)
-            {
-                MessageBox.Show("Invalid phone number.");
-                return;
-            }
-
-            if (selectedPerson == null) // Adding a new person
-            {
-                var newPerson = new Person(name, phone, email);
+                var newPerson = new Person(0, name, phone, email);
                 AddPersonToDatabase(newPerson);
-                peopleList.Add(newPerson);
-                MessageBox.Show("Person added succesfully.");
+                LoadPeople();
             }
-            else // Editing a selected person
+            else
             {
                 selectedPerson.Name = name;
                 selectedPerson.PhoneNumber = phone;
                 selectedPerson.Email = email;
                 UpdatePersonInDatabase(selectedPerson);
+                LoadPeople();
             }
 
-            UpdateListView();
             textBox1.Clear();
             textBox2.Clear();
             textBox3.Clear();
@@ -142,55 +108,15 @@ namespace task0
             UpdateButtonState();
         }
 
-
-        private void SaveToDatabase()
+        private void AddPersonToDatabase(Person person)
         {
             string connectionString = "Data Source=people.db;Version=3;";
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
-
-                foreach (var person in peopleList)
-                {
-                    string query = @"
-                INSERT INTO People (Name, PhoneNumber, Email) 
-                VALUES (@Name, @PhoneNumber, @Email)";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Name", person.Name);
-                        command.Parameters.AddWithValue("@PhoneNumber", person.PhoneNumber);
-                        command.Parameters.AddWithValue("@Email", person.Email);
-                        command.ExecuteNonQuery();
-                    }
-                }
-            }
-        }
-
-
-        private void buttonDelete_Click(object sender, EventArgs e)
-        {
-            if (selectedPerson == null) return;
-
-            peopleList.Remove(selectedPerson);
-            UpdateListView();
-            SaveToDatabase();
-            DeletePersonFromDatabase(selectedPerson);
-
-            textBox1.Clear();
-            textBox2.Clear();
-            textBox3.Clear();
-            selectedPerson = null;
-            UpdateButtonState();
-            MessageBox.Show("Person deleted successfully.");
-        }
-
-        private void DeletePersonFromDatabase(Person person)
-        {
-            string connectionString = "Data Source=people.db;Version=3;";
-            using (var connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
-                string query = "DELETE FROM People WHERE Name = @Name AND PhoneNumber = @PhoneNumber AND Email = @Email";
+                string query = @"
+                    INSERT INTO People (Name, PhoneNumber, Email)
+                    VALUES (@Name, @PhoneNumber, @Email)";
                 using (var command = new SQLiteCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@Name", person.Name);
@@ -208,14 +134,44 @@ namespace task0
             {
                 connection.Open();
                 string query = @"
-            UPDATE People 
-            SET Name = @Name, PhoneNumber = @PhoneNumber, Email = @Email 
-            WHERE Name = @Name AND PhoneNumber = @PhoneNumber AND Email = @Email";
+                    UPDATE People
+                    SET Name = @Name, PhoneNumber = @PhoneNumber, Email = @Email
+                    WHERE Id = @Id";
                 using (var command = new SQLiteCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@Name", person.Name);
                     command.Parameters.AddWithValue("@PhoneNumber", person.PhoneNumber);
                     command.Parameters.AddWithValue("@Email", person.Email);
+                    command.Parameters.AddWithValue("@Id", person.Id);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private void buttonDelete_Click(object sender, EventArgs e)
+        {
+            if (selectedPerson == null) return;
+
+            DeletePersonFromDatabase(selectedPerson.Id);
+            LoadPeople();
+
+            textBox1.Clear();
+            textBox2.Clear();
+            textBox3.Clear();
+            selectedPerson = null;
+            UpdateButtonState();
+        }
+
+        private void DeletePersonFromDatabase(int id)
+        {
+            string connectionString = "Data Source=people.db;Version=3;";
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+                string query = "DELETE FROM People WHERE Id = @Id";
+                using (var command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Id", id);
                     command.ExecuteNonQuery();
                 }
             }
@@ -234,10 +190,16 @@ namespace task0
             }
 
             var selectedItem = listView1.SelectedItems[0];
-            selectedPerson = peopleList.FirstOrDefault(p => p.Name == selectedItem.Text);
-            textBox1.Text = selectedPerson?.Name ?? string.Empty;
-            textBox2.Text = selectedPerson?.PhoneNumber ?? string.Empty;
-            textBox3.Text = selectedPerson?.Email ?? string.Empty;
+            var selectedId = (int)selectedItem.Tag;
+            selectedPerson = peopleList.FirstOrDefault(p => p.Id == selectedId);
+
+            if (selectedPerson != null)
+            {
+                textBox1.Text = selectedPerson.Name;
+                textBox2.Text = selectedPerson.PhoneNumber;
+                textBox3.Text = selectedPerson.Email;
+            }
+
             UpdateButtonState();
         }
 
@@ -248,3 +210,4 @@ namespace task0
         }
     }
 }
+
