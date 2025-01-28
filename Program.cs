@@ -7,7 +7,7 @@ namespace task0
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());  // This starts the main form
+            Application.Run(new Form1());
         }
     }
 }
