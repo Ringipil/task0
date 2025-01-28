@@ -1,4 +1,4 @@
-﻿namespace task0
+namespace task0
 {
     partial class Form1
     {
