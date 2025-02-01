@@ -86,6 +86,23 @@ namespace task0
                 return;
             }
 
+            // Check if a person with the same name already exists
+            var existingPerson = peopleList.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existingPerson != null)
+            {
+                // Select and highlight the existing person in the ListView
+                foreach (ListViewItem item in listView1.Items)
+                {
+                    if (item.Text.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        item.Selected = true;
+                        item.EnsureVisible();
+                        MessageBox.Show("This name already exists. Selecting the existing entry for editing.");
+                        return;
+                    }
+                }
+            }
+
             if (selectedPerson == null)
             {
                 var newPerson = new Person(0, name, phone, email);
@@ -100,13 +117,8 @@ namespace task0
                 UpdatePersonInDatabase(selectedPerson);
                 LoadPeople();
             }
-
-            textBox1.Clear();
-            textBox2.Clear();
-            textBox3.Clear();
-            selectedPerson = null;
-            UpdateButtonState();
         }
+
 
         private void AddPersonToDatabase(Person person)
         {
@@ -210,4 +222,3 @@ namespace task0
         }
     }
 }
-
