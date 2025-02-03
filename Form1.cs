@@ -108,6 +108,9 @@ namespace task0
                 var newPerson = new Person(0, name, phone, email);
                 AddPersonToDatabase(newPerson);
                 LoadPeople();
+                textBox1.Clear();
+                textBox2.Clear();
+                textBox3.Clear();
             }
             else
             {
